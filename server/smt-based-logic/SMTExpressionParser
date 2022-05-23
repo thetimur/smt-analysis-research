@@ -1,0 +1,125 @@
+
+public class SMTExpressionParser {
+	
+	public SMTManager formulaManager = null;
+	
+	public SMTExpressionParser(SMTManager manager) {
+		try {
+			formulaManager = manager;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public BooleanFormula parseSMT(Expression expr) {
+		BooleanFormula result = null;
+	    
+	    if (expr instanceof AndImpl) {
+			result = parseSMT((AndImpl)expr);
+		} else if (expr instanceof OrImpl) {
+			result = parseSMT((OrImpl)expr);
+		} else if (expr instanceof NotImpl) {
+			result = parseSMT((NotImpl)expr);
+		} else if (expr instanceof ComparisonImpl) {
+			result = parseSMT((ComparisonImpl)expr);
+		} else if (expr instanceof EqualityImpl) {
+			result = parseSMT((EqualityImpl)expr);
+		}
+	    		
+	    return result;
+	}
+	
+	private BooleanFormula parseSMT(AndImpl current) {
+		return formulaManager.bmgr.and(
+					parseSMT(current.getLeft()),
+					parseSMT(current.getRight())
+				);
+	}
+	
+	private BooleanFormula parseSMT(OrImpl current) {
+		return formulaManager.bmgr.or(
+					parseSMT(current.getLeft()),
+					parseSMT(current.getRight())
+				);
+	}
+	
+	private BooleanFormula parseSMT(NotImpl current) {
+		return formulaManager.bmgr.not(
+					parseSMT(current.getExpression())
+				);
+	}
+	
+	private BooleanFormula parseSMT(ComparisonImpl current) {
+		BooleanFormula result = null;
+		
+		switch (current.getOp()) {
+			case ("<"):
+				result = formulaManager.imgr.lessThan(
+						parseVariable(current.getLeft()),
+						parseVariable(current.getRight())
+					);
+				break;
+			case ("<="):
+				result = formulaManager.imgr.lessOrEquals(
+						parseVariable(current.getLeft()),
+						parseVariable(current.getRight())
+					);
+				break;
+			case (">"):
+				result = formulaManager.imgr.greaterThan(
+						parseVariable(current.getLeft()),
+						parseVariable(current.getRight())
+					);
+				break;
+			case (">="):
+				result = formulaManager.imgr.greaterOrEquals(
+						parseVariable(current.getLeft()),
+						parseVariable(current.getRight())
+					);
+				break;
+		}
+		
+		return result;
+	}
+	
+	private BooleanFormula parseSMT(EqualityImpl current) {
+		BooleanFormula result = null;
+		
+		switch (current.getOp()) {
+			case ("=="):
+				result = formulaManager.imgr.equal(
+						parseVariable(current.getLeft()),
+						parseVariable(current.getRight())
+					);
+			case ("!="):
+				result = formulaManager.imgr.distinct(
+						List.of(
+							parseVariable(current.getLeft()),
+							parseVariable(current.getRight())
+						)
+					);
+		}
+		
+		return result;
+	}
+	
+	private IntegerFormula parseVariable(Expression expr) {
+		IntegerFormula result = null;
+		
+		if (expr instanceof VariableImpl) {
+			result = parseVariable((VariableImpl)expr);
+		} else if (expr instanceof IntConstantImpl) {
+			result = parseVariable((IntConstantImpl)expr);
+		}
+		
+		return result;
+	}
+	
+	private IntegerFormula parseVariable(VariableImpl current) {
+		return formulaManager.imgr.makeVariable(current.getValue().getAttr().getName());
+	}
+	
+	private IntegerFormula parseVariable(IntConstantImpl current) {
+		return formulaManager.imgr.makeNumber(current.getValue());
+	}
+}
